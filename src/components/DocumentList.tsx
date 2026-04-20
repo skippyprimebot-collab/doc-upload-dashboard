@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { FileText, Image, File as FileIcon, Download, Eye, Loader2 } from 'lucide-react';
+import { FileText, Image, File as FileIcon, Download, Eye, Loader2, Trash2 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import {
@@ -28,7 +28,7 @@ interface DocumentListProps {
 
 export function DocumentList({ documents, isLoading, onRefresh }: DocumentListProps) {
   const [selectedDoc, setSelectedDoc] = useState<Document | null>(null);
-  const [isDownloading, setIsDownloading] = useState<number | null>(null);
+  const [isDeleting, setIsDeleting] = useState<number | null>(null);
 
   const getFileIcon = (mimeType: string) => {
     if (mimeType.startsWith('image/')) {
@@ -60,25 +60,38 @@ export function DocumentList({ documents, isLoading, onRefresh }: DocumentListPr
     });
   };
 
-  const handleDownload = async (doc: Document) => {
-    setIsDownloading(doc.id);
+  const handleDownload = (doc: Document) => {
+    // Open the Blob URL directly for download
+    const link = document.createElement('a');
+    link.href = doc.blob_url;
+    link.download = doc.original_name;
+    link.target = '_blank';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  const handleDelete = async (doc: Document) => {
+    if (!confirm(`Are you sure you want to delete "${doc.original_name}"?`)) {
+      return;
+    }
+
+    setIsDeleting(doc.id);
     try {
-      const response = await fetch(`/api/documents/${doc.id}/download`);
+      const response = await fetch(`/api/documents/${doc.id}`, {
+        method: 'DELETE',
+      });
+
       if (response.ok) {
-        const blob = await response.blob();
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = doc.original_name;
-        document.body.appendChild(a);
-        a.click();
-        window.URL.revokeObjectURL(url);
-        document.body.removeChild(a);
+        onRefresh();
+      } else {
+        alert('Failed to delete document');
       }
     } catch (error) {
-      console.error('Download error:', error);
+      console.error('Delete error:', error);
+      alert('Failed to delete document');
     } finally {
-      setIsDownloading(null);
+      setIsDeleting(null);
     }
   };
 
@@ -135,12 +148,20 @@ export function DocumentList({ documents, isLoading, onRefresh }: DocumentListPr
                             variant="ghost"
                             size="sm"
                             onClick={() => handleDownload(doc)}
-                            disabled={isDownloading === doc.id}
                           >
-                            {isDownloading === doc.id ? (
+                            <Download className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleDelete(doc)}
+                            disabled={isDeleting === doc.id}
+                            className="text-red-500 hover:text-red-700"
+                          >
+                            {isDeleting === doc.id ? (
                               <Loader2 className="h-4 w-4 animate-spin" />
                             ) : (
-                              <Download className="h-4 w-4" />
+                              <Trash2 className="h-4 w-4" />
                             )}
                           </Button>
                         </div>

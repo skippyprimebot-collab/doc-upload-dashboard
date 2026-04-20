@@ -1,9 +1,5 @@
 import { NextResponse } from 'next/server';
 import { getDocumentById } from '@/lib/db';
-import { readFile } from 'fs/promises';
-import { join } from 'path';
-
-const UPLOAD_DIR = process.env.UPLOAD_DIR || '/app/uploads';
 
 export async function GET(
   request: Request,
@@ -28,17 +24,8 @@ export async function GET(
       );
     }
 
-    // Read the file from filesystem
-    const filePath = join(UPLOAD_DIR, document.filename);
-    const fileBuffer = await readFile(filePath);
-
-    // Return the file with appropriate headers for download
-    return new Response(fileBuffer, {
-      headers: {
-        'Content-Type': document.mime_type,
-        'Content-Disposition': `attachment; filename="${document.original_name}"`,
-      },
-    });
+    // Redirect to the Blob URL for download
+    return NextResponse.redirect(document.blob_url);
   } catch (error) {
     console.error('Error downloading document:', error);
     return NextResponse.json(
