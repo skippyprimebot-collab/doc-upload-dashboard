@@ -4,16 +4,20 @@ import { del } from '@vercel/blob';
 
 export async function DELETE(
   request: Request,
-  { params }: { params: { id: string } }
+  context: { params: { id: string } }
 ): Promise<NextResponse> {
   try {
-    // Await params for Next.js 14
-    const { id: idParam } = await Promise.resolve(params);
+    // Get ID from URL path
+    const url = new URL(request.url);
+    const pathParts = url.pathname.split('/');
+    const idParam = pathParts[pathParts.length - 1];
     const id = parseInt(idParam, 10);
+    
+    console.log('Delete request for ID:', id, 'from URL:', request.url);
     
     if (isNaN(id)) {
       return NextResponse.json(
-        { success: false, error: 'Invalid document ID' },
+        { success: false, error: 'Invalid document ID: ' + idParam },
         { status: 400 }
       );
     }
@@ -22,7 +26,7 @@ export async function DELETE(
 
     if (!document) {
       return NextResponse.json(
-        { success: false, error: 'Document not found' },
+        { success: false, error: 'Document not found with ID: ' + id },
         { status: 404 }
       );
     }
@@ -42,45 +46,7 @@ export async function DELETE(
   } catch (error) {
     console.error('Error deleting document:', error);
     return NextResponse.json(
-      { success: false, error: 'Failed to delete document' },
-      { status: 500 }
-    );
-  }
-}
-
-// Also handle GET for document details
-export async function GET(
-  request: Request,
-  { params }: { params: { id: string } }
-): Promise<NextResponse> {
-  try {
-    const { id: idParam } = await Promise.resolve(params);
-    const id = parseInt(idParam, 10);
-    
-    if (isNaN(id)) {
-      return NextResponse.json(
-        { success: false, error: 'Invalid document ID' },
-        { status: 400 }
-      );
-    }
-
-    const document = await getDocumentById(id);
-
-    if (!document) {
-      return NextResponse.json(
-        { success: false, error: 'Document not found' },
-        { status: 404 }
-      );
-    }
-
-    return NextResponse.json({
-      success: true,
-      document,
-    });
-  } catch (error) {
-    console.error('Error fetching document:', error);
-    return NextResponse.json(
-      { success: false, error: 'Failed to fetch document' },
+      { success: false, error: 'Failed to delete document: ' + (error instanceof Error ? error.message : String(error)) },
       { status: 500 }
     );
   }
