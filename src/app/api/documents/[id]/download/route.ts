@@ -1,5 +1,9 @@
 import { NextResponse } from 'next/server';
 import { getDocumentById } from '@/lib/db';
+import { readFile } from 'fs/promises';
+import { join } from 'path';
+
+const UPLOAD_DIR = process.env.UPLOAD_DIR || '/app/uploads';
 
 export async function GET(
   request: Request,
@@ -24,20 +28,12 @@ export async function GET(
       );
     }
 
-    // Fetch the file from blob storage
-    const response = await fetch(document.blob_url);
-    
-    if (!response.ok) {
-      return NextResponse.json(
-        { success: false, error: 'Failed to fetch file from storage' },
-        { status: 500 }
-      );
-    }
-
-    const blob = await response.blob();
+    // Read the file from filesystem
+    const filePath = join(UPLOAD_DIR, document.filename);
+    const fileBuffer = await readFile(filePath);
 
     // Return the file with appropriate headers for download
-    return new Response(blob, {
+    return new Response(fileBuffer, {
       headers: {
         'Content-Type': document.mime_type,
         'Content-Disposition': `attachment; filename="${document.original_name}"`,
