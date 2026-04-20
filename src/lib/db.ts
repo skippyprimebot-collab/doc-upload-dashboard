@@ -52,13 +52,20 @@ export async function createDocument(
   blobUrl: string,
   thumbnailUrl?: string | undefined
 ): Promise<Document> {
-  const result = await query<Document>(
-    `INSERT INTO documents (filename, original_name, mime_type, size, blob_url, thumbnail_url)
-     VALUES ($1, $2, $3, $4, $5, $6)
-     RETURNING *`,
-    [filename, originalName, mimeType, size, blobUrl, thumbnailUrl]
-  );
-  return result.rows[0];
+  console.log('DB: Creating document:', { filename, originalName, mimeType, size });
+  try {
+    const result = await query<Document>(
+      `INSERT INTO documents (filename, original_name, mime_type, size, blob_url, thumbnail_url)
+       VALUES ($1, $2, $3, $4, $5, $6)
+       RETURNING *`,
+      [filename, originalName, mimeType, size, blobUrl, thumbnailUrl]
+    );
+    console.log('DB: Insert result:', result.rows[0]);
+    return result.rows[0];
+  } catch (error) {
+    console.error('DB: Insert failed:', error);
+    throw error;
+  }
 }
 
 export async function getDocuments(): Promise<Document[]> {
