@@ -113,13 +113,14 @@ export function FileUpload({ onUploadSuccess }: FileUploadProps) {
             Drag and drop your file here
           </p>
           <p className="text-sm text-gray-500 mb-4">
-            or click to browse
+            or click to browse (PDF, Markdown, Text, Images, Docs, and more)
           </p>
           <input
             type="file"
             onChange={handleFileSelect}
             className="hidden"
             id="file-input"
+            accept=".pdf,.md,.txt,.doc,.docx,.xls,.xlsx,.csv,.json,.html,.css,.js,.ts,.tsx,.jpg,.jpeg,.png,.gif,.webp,.mp4,.mp3,.zip,.rar,.7z"
           />
           <Button
             variant="outline"
