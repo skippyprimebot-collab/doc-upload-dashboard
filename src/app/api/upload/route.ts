@@ -17,7 +17,7 @@ export async function POST(request: Request): Promise<NextResponse> {
       );
     }
 
-    console.log('File received:', file.name, 'Size:', file.size);
+    console.log('File received:', file.name, 'Size:', file.size, 'Type:', file.type);
 
     // Generate unique filename
     const timestamp = Date.now();
@@ -25,23 +25,49 @@ export async function POST(request: Request): Promise<NextResponse> {
 
     // Upload to Vercel Blob
     console.log('Uploading to Vercel Blob...');
-    const blob = await put(uniqueFilename, file, {
-      access: 'public',
-      token: process.env.BLOB_READ_WRITE_TOKEN,
-    });
-    console.log('Blob upload successful:', blob.url);
+    let blob;
+    try {
+      blob = await put(uniqueFilename, file, {
+        access: 'public',
+        token: process.env.BLOB_READ_WRITE_TOKEN,
+      });
+      console.log('Blob upload successful:', blob.url);
+    } catch (blobError) {
+      console.error('Blob upload failed:', blobError);
+      return NextResponse.json(
+        { success: false, error: 'Failed to upload to storage: ' + (blobError instanceof Error ? blobError.message : String(blobError)) },
+        { status: 500 }
+      );
+    }
 
     // Save metadata to database
     console.log('Saving to database...');
-    const document = await createDocument(
-      uniqueFilename,
-      file.name,
-      file.type,
-      file.size,
-      blob.url,
-      undefined
-    );
-    console.log('Database save successful:', document);
+    let document;
+    try {
+      document = await createDocument(
+        uniqueFilename,
+        file.name,
+        file.type || 'application/octet-stream',
+        file.size,
+        blob.url,
+        undefined
+      );
+      console.log('Database save successful:', document);
+    } catch (dbError) {
+      console.error('Database save failed:', dbError);
+      // Try to delete the blob since DB save failed
+      try {
+        const { del } = await import('@vercel/blob');
+        await del(uniqueFilename, { token: process.env.BLOB_READ_WRITE_TOKEN });
+        console.log('Rolled back blob upload');
+      } catch (delError) {
+        console.error('Failed to rollback blob:', delError);
+      }
+      return NextResponse.json(
+        { success: false, error: 'Failed to save to database: ' + (dbError instanceof Error ? dbError.message : String(dbError)) },
+        { status: 500 }
+      );
+    }
 
     return NextResponse.json({
       success: true,
