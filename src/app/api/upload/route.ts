@@ -26,7 +26,7 @@ export async function POST(request: Request): Promise<NextResponse> {
     // Upload to Vercel Blob
     console.log('Uploading to Vercel Blob...');
     const blob = await put(uniqueFilename, file, {
-      access: 'public',
+      access: 'private',
     });
     console.log('Blob upload successful:', blob.url);
 
