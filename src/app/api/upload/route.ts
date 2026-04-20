@@ -23,9 +23,12 @@ export async function POST(request: Request): Promise<NextResponse> {
     const timestamp = Date.now();
     const uniqueFilename = `${timestamp}-${file.name}`;
 
-    // Upload to Vercel Blob - store is private by default, don't specify access
+    // Upload to Vercel Blob
     console.log('Uploading to Vercel Blob...');
-    const blob = await put(uniqueFilename, file);
+    const blob = await put(uniqueFilename, file, {
+      access: 'public',
+      token: process.env.BLOB_READ_WRITE_TOKEN,
+    });
     console.log('Blob upload successful:', blob.url);
 
     // Save metadata to database
