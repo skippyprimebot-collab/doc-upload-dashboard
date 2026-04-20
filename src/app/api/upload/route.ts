@@ -1,10 +1,6 @@
 import { NextResponse } from 'next/server';
+import { put } from '@vercel/blob';
 import { createDocument } from '@/lib/db';
-import { writeFile } from 'fs/promises';
-import { mkdir } from 'fs/promises';
-import { join } from 'path';
-
-const UPLOAD_DIR = process.env.UPLOAD_DIR || '/app/uploads';
 
 export async function POST(request: Request): Promise<NextResponse> {
   try {
@@ -22,17 +18,10 @@ export async function POST(request: Request): Promise<NextResponse> {
     const timestamp = Date.now();
     const uniqueFilename = `${timestamp}-${file.name}`;
 
-    // Ensure upload directory exists
-    await mkdir(UPLOAD_DIR, { recursive: true });
-
-    // Convert file to buffer and save to filesystem
-    const bytes = await file.arrayBuffer();
-    const buffer = Buffer.from(bytes);
-    const filePath = join(UPLOAD_DIR, uniqueFilename);
-    await writeFile(filePath, buffer);
-
-    // Create a relative URL for the file
-    const fileUrl = `/api/files/${uniqueFilename}`;
+    // Upload to Vercel Blob
+    const blob = await put(uniqueFilename, file, {
+      access: 'public',
+    });
 
     // Save metadata to database
     const document = await createDocument(
@@ -40,7 +29,7 @@ export async function POST(request: Request): Promise<NextResponse> {
       file.name,
       file.type,
       file.size,
-      fileUrl,
+      blob.url,
       undefined // thumbnail_url - can be added later
     );
 
